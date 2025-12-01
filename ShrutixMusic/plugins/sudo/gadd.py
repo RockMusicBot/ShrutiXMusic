@@ -2,8 +2,8 @@ import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 OWNERS = "8450725193"
-from ShrutiMusic import nand
-from ShrutiMusic.utils.database import add_served_chat, get_assistant
+from ShrutixMusic import nand
+from ShrutixMusic.utils.database import add_served_chat, get_assistant
 
 
 @app.on_message(filters.command("gadd") & filters.user(int(OWNERS)))

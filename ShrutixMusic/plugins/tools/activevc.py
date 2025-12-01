@@ -40,7 +40,7 @@ def generate_summary_text(voice_count, video_count):
     )
 
 
-@app.on_message(filters.command(["activecalls", "acalls"]) & SUDOERS)
+@nand.on_message(filters.command(["activecalls", "acalls"]) & SUDOERS)
 async def active_calls(_, message: Message):
     try:
         voice_ids = await get_active_chats()
@@ -60,7 +60,7 @@ async def active_calls(_, message: Message):
         await message.reply_text("❌ Error displaying call summary.")
 
 
-@app.on_callback_query(filters.regex(CALLS_CLOSE) & SUDOERS)
+@nand.on_callback_query(filters.regex(CALLS_CLOSE) & SUDOERS)
 async def close_calls(_, query: CallbackQuery):
     try:
         await query.message.delete()

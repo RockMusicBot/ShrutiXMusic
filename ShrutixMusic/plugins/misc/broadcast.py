@@ -128,7 +128,8 @@ async def braodcast_message(client, message, _):
         chats = []
         schats = await get_served_chats()
         for chat in schats:
-            chats.nandend(int(chat["chat_id"]))
+            chats.append(int(chat["chat_id"]))  # FIXED
+
         for i in chats:
             try:
                 if "-forward" in message.text and message.reply_to_message:
@@ -171,7 +172,8 @@ async def braodcast_message(client, message, _):
         served_users = []
         susers = await get_served_users()
         for user in susers:
-            served_users.nandend(int(user["user_id"]))
+            served_users.append(int(user["user_id"]))  # FIXED
+
         for i in served_users:
             try:
                 if "-forward" in message.text and message.reply_to_message:
@@ -242,15 +244,13 @@ async def auto_clean():
                         chat_id, filter=ChatMembersFilter.ADMINISTRATORS
                     ):
                         if user.privileges.can_manage_video_chats:
-                            adminlist[chat_id].nandend(user.user.id)
+                            adminlist[chat_id].append(user.user.id)  # FIXED
                     authusers = await get_authuser_names(chat_id)
                     for user in authusers:
                         user_id = await alpha_to_int(user)
-                        adminlist[chat_id].nandend(user_id)
+                        adminlist[chat_id].append(user_id)  # FIXED
         except:
             continue
 
 
 asyncio.create_task(auto_clean())
-
-

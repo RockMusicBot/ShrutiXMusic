@@ -37,7 +37,7 @@ async def add_allbot(client, message):
             await status.edit(
                 f"Adding {bot_username}\n\n✔ Added: {done}\n✘ Failed: {failed}\nBy @{userbot.username}"
             )
-            await asyncio.sleep(40)
+            await asyncio.sleep(5)
 
         await status.edit(f"🎉 Done! {bot_username} Added.\n\n✔ {done} chats\n✘ {failed} failed.")
 

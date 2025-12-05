@@ -555,4 +555,177 @@ class YouTubeAPI:
             "link": info.get("webpage_url", self._prepare_link(link, videoid)),
             "vidid": info.get("id", ""),
             "duration_min": info.get("duration")
-            if isinstance(info.get("durat
+            if isinstance(info.get("duration"), str)
+            else None,
+            "thumb": thumb,
+        }
+        return details, info.get("id", "")
+
+    @capture_internal_err
+    async def formats(
+        self, link: str, videoid: Union[str, bool, None] = None
+    ) -> Tuple[List[Dict], str]:
+        link = self._prepare_link(link, videoid)
+        key = f"f:{link}"
+        now = time.time()
+        async with _formats_lock:
+            cached = _formats_cache.get(key)
+            if cached and now - cached[0] < YOUTUBE_META_TTL:
+                return cached[1], cached[2]
+
+        # Rate limiting check
+        _check_rate_limit()
+        
+        opts = {"quiet": True}
+        cf = _cookiefile_path()
+        if cf:
+            opts["cookiefile"] = cf
+        out: List[Dict] = []
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(link, download=False)
+                for fmt in info.get("formats", []):
+                    # Skip dash formats
+                    if "dash" in str(fmt.get("format", "")).lower():
+                        continue
+                    # Check for required keys
+                    if not any(k in fmt for k in ("filesize", "filesize_approx")):
+                        continue
+                    if not all(k in fmt for k in ("format", "format_id", "ext", "format_note")):
+                        continue
+                    size = fmt.get("filesize") or fmt.get("filesize_approx")
+                    if not size:
+                        continue
+                    out.append(
+                        {
+                            "format": fmt["format"],
+                            "filesize": size,
+                            "format_id": fmt["format_id"],
+                            "ext": fmt["ext"],
+                            "format_note": fmt["format_note"],
+                            "yturl": link,
+                        }
+                    )
+        except Exception:
+            pass
+
+        async with _formats_lock:
+            if len(_formats_cache) > YOUTUBE_META_MAX:
+                _formats_cache.clear()
+            _formats_cache[key] = (now, out, link)
+
+        return out, link
+
+    @capture_internal_err
+    async def slider(
+        self, link: str, query_type: int, videoid: Union[str, bool, None] = None
+    ) -> Tuple[str, Optional[str], str, str]:
+        data = await VideosSearch(self._prepare_link(link, videoid), limit=10).next()
+        results = data.get("result", [])
+        if not results or query_type >= len(results):
+            raise IndexError(
+                f"Query type index {query_type} out of range (found {len(results)} results)"
+            )
+        r = results[query_type]
+        return (
+            r.get("title", ""),
+            r.get("duration"),
+            r.get("thumbnails", [{}])[0].get("url", "").split("?")[0],
+            r.get("id", ""),
+        )
+
+    @capture_internal_err
+    async def download(
+        self,
+        link: str,
+        mystic,
+        *,
+        video: Union[bool, str, None] = None,
+        videoid: Union[str, bool, None] = None,
+        songaudio: Union[bool, str, None] = None,
+        songvideo: Union[bool, str, None] = None,
+        format_id: Union[bool, str, None] = None,
+        title: Union[bool, str, None] = None,
+    ) -> Union[Tuple[str, Optional[bool]], Tuple[None, None]]:
+        link = self._prepare_link(link, videoid)
+        video_id = link.split('v=')[-1].split('&')[0] if 'v=' in link else link
+        
+        # ✅ COMMON FILE PATH CHECK - HAR BAAR PEHLE YE KARO
+        extension = ".webm" if not video else ".mp4"
+        common_file_path = os.path.join("downloads", f"{video_id}{extension}")
+        
+        if os.path.exists(common_file_path) and os.path.getsize(common_file_path) > 10240:
+            print(f"✅ Common local file found: {common_file_path}")
+            return common_file_path, True
+
+        # VIDEO KE LIYE - STREAM ONLY (BEST) ✅
+        if songvideo or video:
+            # ✅ PEHLE LOCAL FILE CHECK (FASTEST) - Agar koi existing file hai
+            if os.path.exists(common_file_path) and os.path.getsize(common_file_path) > 10240:
+                print(f"✅ Video local file found: {common_file_path}")
+                return common_file_path, True
+            
+            # ✅ DIRECT STREAM - FASTEST PLAYBACK
+            print(f"🎬 Getting stream URL for video: {video_id}")
+            status, stream_url = await self.video(link)
+            if status == 1:
+                print(f"🎬 Using stream URL (instant play)")
+                return stream_url, None
+            else:
+                print(f"❌ Stream failed: {stream_url}")
+                return None, None
+
+        # AUDIO KE LIYE - FAST TELEGRAM TIMEOUTS ✅
+        else:
+            # TELEGRAM FIRST - WITH FAST TIMEOUTS
+            api_result = await download_via_api(link, "audio")
+            if api_result:
+                print(f"✅ Telegram success")
+                return api_result, True
+            else:
+                print(f"🔄 Telegram failed after 1 attempt, switching to yt-dlp immediately")
+            
+            # ✅ YT-DLP SE PEHLE DOUBLE CHECK COMMON FILE
+            if os.path.exists(common_file_path) and os.path.getsize(common_file_path) > 10240:
+                print(f"✅ Common file found before yt-dlp - No download needed")
+                return common_file_path, True
+            
+            # ✅ YT-DLP FALLBACK - WITH FILE MANAGEMENT
+            if await is_on_off(1):
+                p = await yt_dlp_download(link, type="audio")
+                if p:
+                    # ✅ CHECK IF DOWNLOADED FILE IS IN COMMON LOCATION
+                    if p == common_file_path:
+                        print(f"✅ yt-dlp success - File already in common location")
+                        return p, True
+                    else:
+                        # ✅ MOVE FILE TO COMMON LOCATION
+                        try:
+                            shutil.move(p, common_file_path)
+                            print(f"✅ yt-dlp file moved to common location: {common_file_path}")
+                            return common_file_path, True
+                        except Exception as e:
+                            print(f"⚠️ Could not move yt-dlp file: {e}, using original")
+                            return p, True
+                else:
+                    print(f"❌ yt-dlp also failed")
+            
+            # ✅ CONCURRENT FALLBACK - WITH FILE MANAGEMENT
+            p = await download_audio_concurrent(link)
+            if p:
+                # ✅ CHECK IF DOWNLOADED FILE IS IN COMMON LOCATION
+                if p == common_file_path:
+                    print(f"✅ yt-dlp concurrent success - File already in common location")
+                    return p, True
+                else:
+                    # ✅ MOVE FILE TO COMMON LOCATION
+                    try:
+                        shutil.move(p, common_file_path)
+                        print(f"✅ yt-dlp concurrent file moved to common location: {common_file_path}")
+                        return common_file_path, True
+                    except Exception as e:
+                        print(f"⚠️ Could not move concurrent file: {e}, using original")
+                        return p, True
+            else:
+                print(f"❌ All download methods failed")
+                return None, None

@@ -6,7 +6,7 @@ import traceback
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageEnhance
 from py_yt import VideosSearch
-from ShrutixMusic import nand
+from ShrutixMusic import nand   # ✅ FIXED
 import math
 
 CACHE_DIR = Path("cache")
@@ -278,11 +278,14 @@ async def gen_thumb(videoid: str):
         brand_y = random.randint(25, 45)
         
         shadow_offset = 2
+
+        # -------------- FIXED HERE ----------------
         draw.text((brand_x + shadow_offset, brand_y + shadow_offset), 
-                 app.username, fill=(0, 0, 0, 150), font=brand_font)
-        draw.text((brand_x, brand_y), app.username, fill=(255, 255, 255, 255), font=brand_font)
-        
-        brand_bbox = draw.textbbox((brand_x, brand_y), app.username, font=brand_font)
+                 nand.username, fill=(0, 0, 0, 150), font=brand_font)
+        draw.text((brand_x, brand_y), nand.username, fill=(255, 255, 255, 255), font=brand_font)
+        # ------------------------------------------
+
+        brand_bbox = draw.textbbox((brand_x, brand_y), nand.username, font=brand_font)
         brand_w = brand_bbox[2] - brand_bbox[0]
         underline_y = brand_bbox[3] + 6
         draw.line([(brand_x, underline_y), (brand_x + brand_w, underline_y)], 

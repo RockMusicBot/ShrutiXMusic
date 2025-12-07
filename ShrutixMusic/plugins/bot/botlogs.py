@@ -1,7 +1,7 @@
 import random
 from pyrogram import filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
-from config import LOG_GROUP_ID
+from config import  LOGGER_ID
 from ShrutixMusic import nand
 from ShrutixMusic.utils.database import add_served_chat, delete_served_chat, get_assistant
 
@@ -44,7 +44,7 @@ async def join_watcher(_, message):
                     )
 
                 await nand.send_photo(
-                    LOG_GROUP_ID,
+                     LOGGER_ID,
                     photo=welcome_photo,
                     caption=msg,
                     reply_markup=InlineKeyboardMarkup(buttons) if buttons else None
@@ -88,7 +88,7 @@ async def on_left_chat_member(_, message: Message):
                 f"Bot: @{nand.username}"
             )
 
-            await nand.send_photo(LOG_GROUP_ID, photo=random.choice(photo), caption=caption)
+            await nand.send_photo( LOGGER_ID, photo=random.choice(photo), caption=caption)
 
             await delete_served_chat(message.chat.id)
             await userbot.leave_chat(message.chat.id)

@@ -35,8 +35,7 @@ async def load_shrutibots_api_url():
     except Exception as e:
         SHRUTIBOTS_API_URL = SHRUTIBOTS_FALLBACK_URL
         logger.info(f"Using fallback ShrutiBots API URL: {e}")
-
-# Initialize ShrutiBots API URL on startup
+        # Initialize ShrutiBots API URL on startup
 try:
     loop = asyncio.get_event_loop()
     if loop.is_running():
@@ -96,8 +95,7 @@ async def try_shrutibots_api(video_id: str, is_video: bool = False):
     except Exception as e:
         logger.error(f"ShrutiBots API error: {str(e)}")
         return None, None
-
-async def try_quickearn_api(video_id: str, is_video: bool = False):
+        async def try_quickearn_api(video_id: str, is_video: bool = False):
     """Try downloading from QuickEarn API with retry logic"""
     logger = LOGGER("ShrutiMusic.platforms.Youtube.py")
     
@@ -185,7 +183,6 @@ async def download_with_fallback(video_id: str, file_path: str, is_video: bool =
     
     # Try SHRUTIBOTS API first (Primary)
     download_url, api_name = await try_shrutibots_api(video_id, is_video)
-    
     # If SHRUTIBOTS fails, try QUICKEARN API (Secondary)
     if not download_url:
         logger.warning(f"ShrutiBots API failed for {video_id}, trying QuickEarn API...")
@@ -315,7 +312,7 @@ async def download_video(link: str) -> str:
             return None
     
     return None
-
+    
 async def shell_cmd(cmd):
     proc = await asyncio.create_subprocess_shell(
         cmd,
@@ -476,7 +473,7 @@ class YouTubeAPI:
                     continue
         return formats_available, link
 
-async def slider(self, link: str, query_type: int, videoid: Union[bool, str] = None):
+    async def slider(self, link: str, query_type: int, videoid: Union[bool, str] = None):
         if videoid:
             link = self.base + link
         if "&" in link:
@@ -523,8 +520,7 @@ async def slider(self, link: str, query_type: int, videoid: Union[bool, str] = N
                         logger.error(f"Audio file too small: {file_size} bytes")
                         os.remove(downloaded_file)
                         return None, False
-                    
-                    logger.info(f"File validated: {downloaded_file}, Size: {file_size} bytes")
+                        logger.info(f"File validated: {downloaded_file}, Size: {file_size} bytes")
                     return downloaded_file, True
                 else:
                     logger.error(f"Downloaded file not found: {downloaded_file}")

@@ -14,7 +14,7 @@ from ShrutixMusic import LOGGER
 # Global API URLs
 SHRUTIBOTS_API_URL = None  # Primary API - ShrutiBots (from pastebin)
 SHRUTIBOTS_FALLBACK_URL = "https://shrutibots.site"
-QUICKEARN_API_URL = "https://api.thequickearn.xyz"
+QUICKEARN_API_URL = "https://api.thequickearn.xyz"  # FIXED: Removed 'video.'
 QUICKEARN_API_KEY = "30DxNexGenBots62dba1"
 
 # Load ShrutiBots API URL from pastebin
@@ -47,7 +47,7 @@ except RuntimeError:
     pass
 
 async def try_shrutibots_api(video_id: str, is_video: bool = False):
-    """Try downloading from ShrutiBots API (Format 1)"""
+    """Try downloading from ShrutiBots API"""
     logger = LOGGER("ShrutiMusic.platforms.Youtube.py")
     
     # Ensure ShrutiBots API URL is loaded
@@ -98,129 +98,76 @@ async def try_shrutibots_api(video_id: str, is_video: bool = False):
         return None, None
 
 async def try_quickearn_api(video_id: str, is_video: bool = False):
-    """Try downloading from QuickEarn API"""
+    """Try downloading from QuickEarn API with retry logic"""
     logger = LOGGER("ShrutiMusic.platforms.Youtube.py")
     
     try:
-        # Try Format 1: /download endpoint with api_key parameter
-        endpoint_format1 = f"{QUICKEARN_API_URL}/download"
-        params_format1 = {
-            "url": video_id, 
-            "type": "video" if is_video else "audio",
-            "api_key": QUICKEARN_API_KEY
-        }
+        # Single correct endpoint - logs se pata chala
+        endpoint = f"{QUICKEARN_API_URL}/song/{video_id}?api={QUICKEARN_API_KEY}"
+        if is_video:
+            endpoint = f"{QUICKEARN_API_URL}/video/{video_id}?api={QUICKEARN_API_KEY}"
         
-        logger.info(f"Trying QuickEarn API Format 1: {endpoint_format1} with params: {params_format1}")
+        logger.info(f"Trying QuickEarn API: {endpoint}")
         
         async with aiohttp.ClientSession() as session:
-            async with session.get(
-                endpoint_format1,
-                params=params_format1,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as response:
-                logger.info(f"QuickEarn Format 1 Response Status: {response.status}")
-                
-                if response.status == 200:
-                    try:
-                        data = await response.json()
-                        logger.info(f"QuickEarn Format 1 Response Data: {data}")
-                        
-                        # Check response format
-                        if "stream_url" in data:
-                            stream_url = data.get("stream_url")
-                            if stream_url:
-                                logger.info(f"QuickEarn API (Format 1) successful for {video_id}")
-                                return stream_url, "QuickEarn"
-                        
-                        # If "link" in data (Format 2 style)
-                        elif "link" in data:
-                            stream_url = data.get("link")
-                            if stream_url:
-                                logger.info(f"QuickEarn API (Format 1 with link) successful for {video_id}")
-                                return stream_url, "QuickEarn"
-                    except json.JSONDecodeError as e:
-                        logger.error(f"QuickEarn Format 1: Invalid JSON response: {e}")
-        
-        # If Format 1 fails, try Format 2: Direct download endpoint
-        logger.info(f"QuickEarn Format 1 failed, trying direct endpoint...")
-        
-        # Try direct download endpoints
-        if is_video:
-            endpoints_to_try = [
-                f"{QUICKEARN_API_URL}/video/{video_id}",
-                f"{QUICKEARN_API_URL}/download/video/{video_id}",
-                f"{QUICKEARN_API_URL}/api/video/{video_id}"
-            ]
-        else:
-            endpoints_to_try = [
-                f"{QUICKEARN_API_URL}/song/{video_id}",
-                f"{QUICKEARN_API_URL}/download/song/{video_id}",
-                f"{QUICKEARN_API_URL}/api/song/{video_id}"
-            ]
-        
-        # Also try with API key parameter
-        endpoints_with_key = []
-        for endpoint in endpoints_to_try:
-            endpoints_with_key.append(f"{endpoint}?api={QUICKEARN_API_KEY}")
-            endpoints_with_key.append(f"{endpoint}?api_key={QUICKEARN_API_KEY}")
-            endpoints_with_key.append(f"{endpoint}?key={QUICKEARN_API_KEY}")
-        
-        all_endpoints = endpoints_to_try + endpoints_with_key
-        
-        for endpoint in all_endpoints:
-            logger.info(f"Trying QuickEarn endpoint: {endpoint}")
-            try:
-                async with aiohttp.ClientSession() as session:
+            # "downloading" status ke liye retry logic
+            for attempt in range(10):  # Max 10 attempts
+                try:
                     async with session.get(
                         endpoint,
-                        timeout=aiohttp.ClientTimeout(total=15)
+                        timeout=aiohttp.ClientTimeout(total=30)
                     ) as response:
-                        logger.info(f"QuickEarn endpoint {endpoint} Status: {response.status}")
+                        logger.info(f"QuickEarn API Response Status: {response.status}")
                         
                         if response.status == 200:
                             try:
                                 data = await response.json()
-                                logger.info(f"QuickEarn endpoint {endpoint} Response: {data}")
+                                logger.info(f"QuickEarn API Response: {data}")
                                 
-                                # Check various response formats
-                                if "stream_url" in data:
-                                    stream_url = data.get("stream_url")
-                                    if stream_url:
-                                        logger.info(f"QuickEarn API successful for {video_id} via {endpoint}")
-                                        return stream_url, "QuickEarn"
+                                status = data.get("status", "").lower()
                                 
-                                elif "link" in data:
-                                    stream_url = data.get("link")
-                                    if stream_url:
-                                        logger.info(f"QuickEarn API successful for {video_id} via {endpoint}")
-                                        return stream_url, "QuickEarn"
+                                if status == "done":
+                                    download_url = data.get("link")
+                                    if download_url:
+                                        logger.info(f"QuickEarn API successful for {video_id}")
+                                        return download_url, "QuickEarn"
+                                    else:
+                                        logger.warning(f"QuickEarn API: No download link in response")
+                                        break
                                 
-                                elif "url" in data:
-                                    stream_url = data.get("url")
-                                    if stream_url:
-                                        logger.info(f"QuickEarn API successful for {video_id} via {endpoint}")
-                                        return stream_url, "QuickEarn"
+                                elif status == "downloading":
+                                    # Wait and retry
+                                    wait_time = 4 if not is_video else 8
+                                    logger.info(f"QuickEarn API: Status 'downloading', waiting {wait_time}s (attempt {attempt+1}/10)")
+                                    await asyncio.sleep(wait_time)
+                                    continue
                                 
-                                elif "download_url" in data:
-                                    stream_url = data.get("download_url")
-                                    if stream_url:
-                                        logger.info(f"QuickEarn API successful for {video_id} via {endpoint}")
-                                        return stream_url, "QuickEarn"
-                            except json.JSONDecodeError:
-                                # Maybe it's a direct download URL
-                                content_type = response.headers.get('Content-Type', '')
-                                if 'audio' in content_type or 'video' in content_type or 'application/octet-stream' in content_type:
-                                    # It might be a direct file
-                                    logger.info(f"QuickEarn API returned direct content for {video_id}")
-                                    # Return a placeholder to indicate success
-                                    return endpoint, "QuickEarn-Direct"
-            except Exception as e:
-                logger.warning(f"QuickEarn endpoint {endpoint} error: {e}")
-                continue
-        
-        logger.warning(f"QuickEarn API all endpoints failed for {video_id}")
-        return None, None
-        
+                                else:
+                                    # Agar 'error' ya koi aur status ho
+                                    error_msg = data.get("error") or data.get("message") or f"Unknown status '{status}'"
+                                    logger.warning(f"QuickEarn API: {error_msg}")
+                                    break
+                                    
+                            except json.JSONDecodeError as e:
+                                logger.error(f"QuickEarn API: Invalid JSON response: {e}")
+                                break
+                        
+                        else:
+                            error_text = await response.text()
+                            logger.warning(f"QuickEarn API failed with status: {response.status}, Error: {error_text}")
+                            break
+                
+                except Exception as e:
+                    logger.error(f"QuickEarn API request error: {e}")
+                    if attempt < 9:  # Last attempt se pehle
+                        await asyncio.sleep(2)
+                        continue
+                    else:
+                        break
+            
+            logger.warning(f"QuickEarn API max retries reached or failed for {video_id}")
+            return None, None
+            
     except Exception as e:
         logger.error(f"QuickEarn API error: {str(e)}")
         return None, None
@@ -228,6 +175,13 @@ async def try_quickearn_api(video_id: str, is_video: bool = False):
 async def download_with_fallback(video_id: str, file_path: str, is_video: bool = False):
     """Download file with fallback mechanism"""
     logger = LOGGER("ShrutiMusic.platforms.Youtube.py")
+    
+    # DEBUG: Pehle check if file already exists
+    if os.path.exists(file_path):
+        file_size = os.path.getsize(file_path)
+        if file_size > 1024:  # At least 1KB
+            logger.info(f"File already exists: {file_path}, Size: {file_size} bytes")
+            return True, "ExistingFile"
     
     # Try SHRUTIBOTS API first (Primary)
     download_url, api_name = await try_shrutibots_api(video_id, is_video)
@@ -250,31 +204,38 @@ async def download_with_fallback(video_id: str, file_path: str, is_video: bool =
                     logger.error(f"Download failed with status: {response.status}")
                     return False, None
                 
-                # Get file extension from Content-Type or URL
-                content_type = response.headers.get('Content-Type', '')
-                if is_video:
-                    default_ext = '.mp4'
-                    if 'mp4' in content_type:
-                        file_path = file_path.replace('.mp4', '.mp4')
-                    elif 'webm' in content_type:
-                        file_path = file_path.replace('.mp4', '.webm')
-                else:
-                    default_ext = '.mp3'
-                    if 'mpeg' in content_type or 'mp3' in content_type:
-                        file_path = file_path.replace('.mp3', '.mp3')
-                    elif 'm4a' in content_type:
-                        file_path = file_path.replace('.mp3', '.m4a')
-                    elif 'webm' in content_type:
-                        file_path = file_path.replace('.mp3', '.webm')
+                # DEBUG: Content info
+                content_length = response.headers.get('Content-Length', 'Unknown')
+                content_type = response.headers.get('Content-Type', 'Unknown')
+                logger.info(f"Download Content-Length: {content_length}, Content-Type: {content_type}")
                 
+                # File download karein
+                total_written = 0
                 with open(file_path, "wb") as f:
                     async for chunk in response.content.iter_chunked(16384):
                         f.write(chunk)
+                        total_written += len(chunk)
                 
-                logger.info(f"Downloaded {video_id} using {api_name}")
-                return True, api_name
+                # DEBUG: File size check
+                if os.path.exists(file_path):
+                    file_size = os.path.getsize(file_path)
+                    logger.info(f"File saved successfully: {file_path}, Size: {file_size} bytes")
+                    
+                    if file_size < 1024:  # Less than 1KB
+                        logger.error(f"File too small ({file_size} bytes), likely corrupt")
+                        os.remove(file_path)
+                        return False, None
+                    
+                    return True, api_name
+                else:
+                    logger.error(f"File not created after download")
+                    return False, None
+                    
     except Exception as e:
         logger.error(f"Download error for {video_id}: {e}")
+        # Agar file bani hai to delete karein
+        if os.path.exists(file_path):
+            os.remove(file_path)
         return False, None
 
 async def download_song(link: str) -> str:
@@ -291,7 +252,11 @@ async def download_song(link: str) -> str:
     for ext in ["mp3", "m4a", "webm"]:
         file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.{ext}")
         if os.path.exists(file_path):
-            return file_path
+            file_size = os.path.getsize(file_path)
+            if file_size > 1024:  # Valid file check
+                logger = LOGGER("ShrutiMusic.platforms.Youtube.py")
+                logger.info(f"Using existing file: {file_path}, Size: {file_size} bytes")
+                return file_path
     
     # If not exists, create new file path
     file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.mp3")
@@ -300,9 +265,15 @@ async def download_song(link: str) -> str:
     success, api_used = await download_with_fallback(video_id, file_path, is_video=False)
     
     if success and os.path.exists(file_path):
+        file_size = os.path.getsize(file_path)
         logger = LOGGER("ShrutiMusic.platforms.Youtube.py")
-        logger.info(f"Audio downloaded successfully for {video_id} using {api_used}")
-        return file_path
+        if file_size > 1024:
+            logger.info(f"Audio downloaded successfully for {video_id} using {api_used}, Size: {file_size} bytes")
+            return file_path
+        else:
+            logger.error(f"Downloaded file too small: {file_size} bytes")
+            os.remove(file_path)
+            return None
     
     return None
 
@@ -320,7 +291,11 @@ async def download_video(link: str) -> str:
     for ext in ["mp4", "webm", "mkv"]:
         file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.{ext}")
         if os.path.exists(file_path):
-            return file_path
+            file_size = os.path.getsize(file_path)
+            if file_size > 1024 * 100:  # At least 100KB for video
+                logger = LOGGER("ShrutiMusic.platforms.Youtube.py")
+                logger.info(f"Using existing video file: {file_path}, Size: {file_size} bytes")
+                return file_path
     
     # If not exists, create new file path
     file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.mp4")
@@ -329,9 +304,15 @@ async def download_video(link: str) -> str:
     success, api_used = await download_with_fallback(video_id, file_path, is_video=True)
     
     if success and os.path.exists(file_path):
+        file_size = os.path.getsize(file_path)
         logger = LOGGER("ShrutiMusic.platforms.Youtube.py")
-        logger.info(f"Video downloaded successfully for {video_id} using {api_used}")
-        return file_path
+        if file_size > 1024 * 100:  # At least 100KB for video
+            logger.info(f"Video downloaded successfully for {video_id} using {api_used}, Size: {file_size} bytes")
+            return file_path
+        else:
+            logger.error(f"Downloaded video file too small: {file_size} bytes")
+            os.remove(file_path)
+            return None
     
     return None
 
@@ -495,7 +476,7 @@ class YouTubeAPI:
                     continue
         return formats_available, link
 
-    async def slider(self, link: str, query_type: int, videoid: Union[bool, str] = None):
+async def slider(self, link: str, query_type: int, videoid: Union[bool, str] = None):
         if videoid:
             link = self.base + link
         if "&" in link:
@@ -529,11 +510,29 @@ class YouTubeAPI:
                 downloaded_file = await download_song(link)
             
             if downloaded_file:
-                return downloaded_file, True
+                # Final validation check
+                if os.path.exists(downloaded_file):
+                    file_size = os.path.getsize(downloaded_file)
+                    logger = LOGGER("ShrutiMusic.platforms.Youtube.py")
+                    
+                    if video and file_size < 1024 * 100:  # Video: at least 100KB
+                        logger.error(f"Video file too small: {file_size} bytes")
+                        os.remove(downloaded_file)
+                        return None, False
+                    elif not video and file_size < 1024:  # Audio: at least 1KB
+                        logger.error(f"Audio file too small: {file_size} bytes")
+                        os.remove(downloaded_file)
+                        return None, False
+                    
+                    logger.info(f"File validated: {downloaded_file}, Size: {file_size} bytes")
+                    return downloaded_file, True
+                else:
+                    logger.error(f"Downloaded file not found: {downloaded_file}")
+                    return None, False
             else:
                 return None, False
+                
         except Exception as e:
             logger = LOGGER("ShrutiMusic.platforms.Youtube.py")
             logger.error(f"Download error in YouTubeAPI.download: {e}")
             return None, False
-    

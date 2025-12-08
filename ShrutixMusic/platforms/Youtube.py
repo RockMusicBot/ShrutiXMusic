@@ -14,7 +14,7 @@ from ShrutixMusic import LOGGER
 # Global API URLs
 SHRUTIBOTS_API_URL = None  # Primary API - ShrutiBots (from pastebin)
 SHRUTIBOTS_FALLBACK_URL = "https://shrutibots.site"
-QUICKEARN_API_URL = "https://api.video.thequickearn.xyz"
+QUICKEARN_API_URL = "Api.thequickearn.xyz"
 QUICKEARN_API_KEY = "30DxNexGenBots62dba1"
 
 # Load ShrutiBots API URL from pastebin

@@ -97,8 +97,7 @@ async def try_shrutibots_api(video_id: str, is_video: bool = False):
         return None, None
         async def try_quickearn_api(video_id: str, is_video: bool = False):
     """Try downloading from QuickEarn API with retry logic"""
-    logger = LOGGER("ShrutiMusic.platforms.Youtube.py")  # ✅ YEH LINE INDENTED HONI CHAHIYE
-    
+    logger = LOGGER("ShrutiMusic.platforms.Youtube.py")
     try:
         # Single correct endpoint - logs se pata chala
         endpoint = f"{QUICKEARN_API_URL}/song/{video_id}?api={QUICKEARN_API_KEY}"

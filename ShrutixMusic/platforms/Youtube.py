@@ -21,7 +21,7 @@ FALLBACK_API_URL_PRIMARY = "https://shrutibots.site"
 
 # Secondary/Fallback API (TheQuickEarn.xyz - user's second choice)
 FALLBACK_API_URL_SECONDARY = "https://api.thequickearn.xyz"
-FALLBACK_API_KEY_SECONDARY = "30DxNexGenBotsKapil"
+FALLBACK_API_KEY_SECONDARY = "30DxNexGenBots62dba1"
 
 # --- Logger Setup ---
 logger = LOGGER(__name__)

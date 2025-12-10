@@ -12,7 +12,7 @@ from pyrogram.enums import MessageEntityType
 from pyrogram.types import Message
 from py_yt import VideosSearch
 # NOTE: Ensure these external utilities are available in your project structure
-from ShrutiMusic.utils.formatters import time_to_seconds 
+from ShrutixMusic.utils.formatters import time_to_seconds 
 
 # ---------------------------------------------------------------------------------
 #                            UTILITY & CONFIGURATION

@@ -37,11 +37,15 @@ INFLEX_API_URL = "https://teaminflex.xyz"
 # !!! REPLACE THIS WITH YOUR ACTUAL INFLEX API KEY !!!
 INFLEX_API_KEY = "INFLEX66417728D" 
 
-# 3. TheQuickEarn/AviaxMusic API (Fallback 1)
+# 3. xBit Music API (New Primary 3)
+YTPROXY_URL = "https://tgapi.xbitcode.com" ## xBit Music Endpoint
+YT_API_KEY = "xbit_vXeUavHk2nhb12AGpMwKhbrEHoaMrJam"
+
+# 4. TheQuickEarn/AviaxMusic API (Fallback 1)
 THEQUICKEARN_API_URL = "https://api.thequickearn.xyz"
 THEQUICKEARN_API_KEY = "30DxNexGenBots62dba1"
 
-# 4. Fallen API (Fallback 2)
+# 5. Fallen API (Fallback 2)
 FALLEN_API_URL = "https://tgmusic.fallenapi.fun"
 FALLEN_API_KEY = "1627ff_iQZYYZxE5tpMrXDMAT9JfikIzWxLS7dq"
 
@@ -210,6 +214,66 @@ async def inflex_api_download(video_id: str, is_video: bool) -> Optional[str]:
         logger.error(f"{log_prefix} [Inflex] Exception for ID: {video_id} - {e}")
         return None
 
+# --- Primary API 3: xBit Music ---
+async def xbit_api_download(video_id: str, is_video: bool) -> Optional[str]:
+    """Downloads file using xBit Music API (Proxy-based)."""
+    
+    file_type = "video" if is_video else "audio"
+    extension = "mp4" if is_video else "mp3"
+    file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.{extension}")
+    log_prefix = "🎥" if is_video else "🎵"
+
+    if not YT_API_KEY or not YTPROXY_URL:
+        logger.warning(f"{log_prefix} [xBit] API Key or URL not set.")
+        return None
+
+    logger.info(f"{log_prefix} [xBit] Attempting download for ID: {video_id}")
+    
+    if os.path.exists(file_path):
+         logger.info(f"{log_prefix} [xBit] Found existing file during API check.")
+         return file_path
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {"x-api-key": YT_API_KEY}
+            endpoint = "video" if is_video else "audio"
+            
+            # 1. Get info/download link
+            async with session.get(f"{YTPROXY_URL}/info/{video_id}", headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                if response.status != 200:
+                    logger.error(f"{log_prefix} [xBit] Info fetch failed with status {response.status}")
+                    return None
+                    
+                data = await response.json()
+                
+                if data.get("status") != "success":
+                    logger.error(f"{log_prefix} [xBit] API error: {data.get('message', 'Unknown error')}")
+                    return None
+                
+                # Check for video_url or audio_url based on request type
+                download_url = data.get(f"{endpoint}_url") 
+                if not download_url:
+                    logger.error(f"{log_prefix} [xBit] Missing download URL in response.")
+                    return None
+            
+            # 2. Stream the file
+            # Re-using headers for download stream if authentication is required
+            async with session.get(download_url, headers=headers, timeout=aiohttp.ClientTimeout(total=600 if is_video else 300)) as file_response:
+                if file_response.status != 200:
+                    logger.error(f"{log_prefix} [xBit] Final stream failed with status {file_response.status}")
+                    return None
+                        
+                with open(file_path, "wb") as f:
+                    async for chunk in file_response.content.iter_chunked(16384):
+                        f.write(chunk)
+                
+                logger.info(f"{log_prefix} [xBit] Download completed successfully.")
+                return file_path
+
+    except Exception as e:
+        logger.error(f"{log_prefix} [xBit] Exception for ID: {video_id} - {e}")
+        return None
+
 # --- Fallback API 1 (Parallel): TheQuickEarn ---
 async def quickearn_api_download(video_id: str, is_video: bool) -> Optional[str]:
     """Downloads file using TheQuickEarn API (Polling-based)."""
@@ -226,7 +290,8 @@ async def quickearn_api_download(video_id: str, is_video: bool) -> Optional[str]
     
     async with aiohttp.ClientSession() as session:
         # 1. Poll API for download link
-        for attempt in range(10):
+        # Polling attempts reduced to 3
+        for attempt in range(3): 
             try:
                 async with session.get(url_to_poll, timeout=aiohttp.ClientTimeout(total=10)) as response:
                     if response.status != 200: raise Exception(f"API request failed with status code {response.status}")
@@ -246,7 +311,7 @@ async def quickearn_api_download(video_id: str, is_video: bool) -> Optional[str]
                         raise Exception(f"API error: {error_msg}")
             except Exception as e:
                 logger.error(f"{log_prefix} [QuickEarn] Polling attempt {attempt+1} failed: {e}")
-                if attempt == 9: return None
+                if attempt == 2: return None # Fail after 3rd attempt
         else:
             return None
     
@@ -277,10 +342,8 @@ async def fallen_api_download(video_id: str, is_video: bool) -> Optional[str]:
 
     logger.info(f"{log_prefix} [Fallen] Attempting download for ID: {video_id}")
     
-    # We will assume a /download endpoint exists, or /track gives a link.
-    # Using /track as per user hint to fetch metadata/link.
-    link_fetch_url = f"{FALLEN_API_URL}/track"
-    
+    link_fetch_url = f"{FALLEN_API_URL}/track" # Endpoint as per your usage
+
     async with aiohttp.ClientSession() as session:
         try:
             # 1. Fetch download link/details
@@ -293,8 +356,8 @@ async def fallen_api_download(video_id: str, is_video: bool) -> Optional[str]:
                     
                 data = await response.json()
                 
-                # Assuming the response contains a 'download_link' or 'link' key for the direct file
-                download_link = data.get("download_link") or data.get("link")
+                # FIX: Check for download_link, link, OR cdnurl (to support direct CDN streams)
+                download_link = data.get("download_link") or data.get("link") or data.get("cdnurl")
                 
                 if not download_link:
                     logger.error(f"{log_prefix} [Fallen] Response missing download link. Data: {data}")
@@ -348,8 +411,6 @@ def yt_dlp_sync_download(link: str, is_video: bool) -> Optional[str]:
         info = x.extract_info(link, download=True)
         
         # Get the actual file path after download and processing
-        # This part requires finding the exact file name if yt-dlp renaming is complex.
-        # Simple lookup:
         downloaded_file = glob.glob(os.path.join(DOWNLOAD_DIR, f"{info['id']}.*"))
         if downloaded_file:
              xyz = downloaded_file[0]
@@ -392,13 +453,14 @@ async def download_manager(link: str, is_video: bool) -> Tuple[Optional[str], bo
             logger.info(f"[Manager] Found existing file in local cache: {file_path}")
             return file_path, True
             
-    # 2. Primary Parallel Stage (Shrutibots & Inflex)
-    logger.info(f"[Manager] Starting Primary Parallel download (Shruti & Inflex) for {video_id}")
+    # 2. Primary Parallel Stage (Shrutibots, Inflex & xBit)
+    logger.info(f"[Manager] Starting Primary Parallel download (Shruti, Inflex, xBit) for {video_id}")
     
     task_shruti = asyncio.create_task(shruti_api_download(video_id, is_video))
     task_inflex = asyncio.create_task(inflex_api_download(video_id, is_video))
+    task_xbit = asyncio.create_task(xbit_api_download(video_id, is_video)) # New Primary Task
     
-    primary_tasks = [task_shruti, task_inflex]
+    primary_tasks = [task_shruti, task_inflex, task_xbit]
 
     done, pending = await asyncio.wait(
         primary_tasks,
@@ -422,13 +484,15 @@ async def download_manager(link: str, is_video: bool) -> Tuple[Optional[str], bo
             if result:
                 return result, True
 
-    # 3. Fallback Parallel Stage (QuickEarn & Fallen)
-    logger.info(f"[Manager] Primary failed. Starting Fallback Parallel download (QuickEarn & Fallen) for {video_id}")
+    # 3. Fallback Parallel Stage (QuickEarn, Fallen & yt-dlp)
+    logger.info(f"[Manager] Primary failed. Starting Fallback Parallel download (QuickEarn, Fallen, YTDLP) for {video_id}")
     
     task_quickearn = asyncio.create_task(quickearn_api_download(video_id, is_video))
     task_fallen = asyncio.create_task(fallen_api_download(video_id, is_video))
+    # YTDLP added here for ultimate reliability and speed in fallback
+    task_ytdlp = asyncio.create_task(yt_dlp_fallback_download(link, is_video)) 
     
-    fallback_tasks = [task_quickearn, task_fallen]
+    fallback_tasks = [task_quickearn, task_fallen, task_ytdlp]
 
     done, pending = await asyncio.wait(
         fallback_tasks,
@@ -452,20 +516,14 @@ async def download_manager(link: str, is_video: bool) -> Tuple[Optional[str], bo
             if result:
                 return result, True
 
-    # 4. Final Failsafe (yt-dlp)
-    logger.warning("[Manager] All 4 APIs failed. Attempting final local yt-dlp download.")
-    file_path = await yt_dlp_fallback_download(link, is_video)
-    
-    if file_path:
-        return file_path, True
-
+    # 4. Final Failsafe Log (All attempts exhausted)
     logger.error(f"[Manager] All download attempts failed for {video_id}")
     return None, False
 
 # ---------------------------------------------------------------------------------
 #                            YOUTUBE API CLASS
 # ---------------------------------------------------------------------------------
-# (This class remains mostly the same, ensuring 'download' and 'video' use the manager)
+# (This class uses the download_manager and remains largely the same)
 
 class YouTubeAPI:
     def __init__(self):
@@ -547,6 +605,7 @@ class YouTubeAPI:
         if "&" in link:
             link = link.split("&")[0]
         
+        # Delegates to the updated download_manager
         file_path, success = await download_manager(link, is_video=True)
         
         if success:
@@ -654,3 +713,4 @@ class YouTubeAPI:
         
         # The download_manager handles all prioritized logic
         return await download_manager(link, is_video=is_video)
+    

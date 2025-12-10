@@ -1,5 +1,3 @@
-#Dual Api Power 🔥 
-#Powered By ☠️
 import asyncio
 import os
 import re
@@ -519,4 +517,6 @@ class YouTubeAPI:
         if downloaded_file:
             return downloaded_file, True 
         else:
-          
+            return None, False
+
+    

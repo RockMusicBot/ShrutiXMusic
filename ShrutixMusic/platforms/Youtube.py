@@ -35,7 +35,7 @@ SHRUTI_API_URL: Optional[str] = None
 # 2. Inflex API (Primary 2)
 INFLEX_API_URL = "https://teaminflex.xyz"
 # !!! REPLACE THIS WITH YOUR ACTUAL INFLEX API KEY !!!
-INFLEX_API_KEY = "YOUR_INFLEX_API_KEY_HERE" 
+INFLEX_API_KEY = "INFLEX66417728D" 
 
 # 3. TheQuickEarn/AviaxMusic API (Fallback 1)
 THEQUICKEARN_API_URL = "https://api.thequickearn.xyz"

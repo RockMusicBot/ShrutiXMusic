@@ -42,7 +42,7 @@ YTPROXY_URL = "https://tgapi.xbitcode.com" ## xBit Music Endpoint
 YT_API_KEY = "xbit_vXeUavHk2nhb12AGpMwKhbrEHoaMrJam"
 
 # 4. TheQuickEarn/AviaxMusic API (Fallback 1)
-THEQUICKEARN_API_URL = "https://api.thequickearn.xyz"
+THEQUICKEARN_API_URL = "https://pytdbotapi.thequickearn.xyz"
 THEQUICKEARN_API_KEY = "30DxNexGenBots62dba1"
 
 # 5. Fallen API (Fallback 2)

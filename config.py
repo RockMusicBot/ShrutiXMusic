@@ -1,4 +1,7 @@
 import re
+
+import os
+
 from os import getenv
 
 from dotenv import load_dotenv
@@ -78,6 +81,8 @@ votemode = {}
 autoclean = []
 confirmer = {}
 
+
+
 START_IMG_URL = os.getenv(
     "START_IMG_URL", "https://files.catbox.moe/7q8bfg.jpg"
 )
@@ -114,6 +119,7 @@ SPOTIFY_ALBUM_IMG_URL = os.getenv(
 SPOTIFY_PLAYLIST_IMG_URL = os.getenv(
     "SPOTIFY_PLAYLIST_IMG_URL", "https://files.catbox.moe/mn69cu.jpg"
 )
+
 
 
 

@@ -78,23 +78,43 @@ votemode = {}
 autoclean = []
 confirmer = {}
 
-
-START_IMG_URL = getenv(
+START_IMG_URL = os.getenv(
     "START_IMG_URL", "https://files.catbox.moe/7q8bfg.jpg"
 )
-PING_IMG_URL = getenv(
+PING_IMG_URL = os.getenv(
     "PING_IMG_URL", "https://files.catbox.moe/mn69cu.jpg"
 )
-PLAYLIST_IMG_URL = "https://files.catbox.moe/mn69cu.jpg"
-STATS_IMG_URL = "https://files.catbox.moe/mn69cu.jpg"
-TELEGRAM_AUDIO_URL = "https://files.catbox.moe/mn69cu.jpg"
-TELEGRAM_VIDEO_URL = "https://files.catbox.moe/mn69cu.jpg"
-STREAM_IMG_URL = "https://files.catbox.moe/mn69cu.jpg"
-SOUNCLOUD_IMG_URL = "https://files.catbox.moe/mn69cu.jpg"
-YOUTUBE_IMG_URL = "https://files.catbox.moe/mn69cu.jpg"
-SPOTIFY_ARTIST_IMG_URL = "https://files.catbox.moe/mn69cu.jpg"
-SPOTIFY_ALBUM_IMG_URL = "https://files.catbox.moe/mn69cu.jpg"
-SPOTIFY_PLAYLIST_IMG_URL = "https://files.catbox.moe/mn69cu.jpg"
+PLAYLIST_IMG_URL = os.getenv(
+    "PLAYLIST_IMG_URL", "https://files.catbox.moe/mn69cu.jpg"
+)
+STATS_IMG_URL = os.getenv(
+    "STATS_IMG_URL", "https://files.catbox.moe/mn69cu.jpg"
+)
+TELEGRAM_AUDIO_URL = os.getenv(
+    "TELEGRAM_AUDIO_URL", "https://files.catbox.moe/mn69cu.jpg"
+)
+TELEGRAM_VIDEO_URL = os.getenv(
+    "TELEGRAM_VIDEO_URL", "https://files.catbox.moe/mn69cu.jpg"
+)
+STREAM_IMG_URL = os.getenv(
+    "STREAM_IMG_URL", "https://files.catbox.moe/mn69cu.jpg"
+)
+SOUNCLOUD_IMG_URL = os.getenv(
+    "SOUNCLOUD_IMG_URL", "https://files.catbox.moe/mn69cu.jpg"
+)
+YOUTUBE_IMG_URL = os.getenv(
+    "YOUTUBE_IMG_URL", "https://files.catbox.moe/mn69cu.jpg"
+)
+SPOTIFY_ARTIST_IMG_URL = os.getenv(
+    "SPOTIFY_ARTIST_IMG_URL", "https://files.catbox.moe/mn69cu.jpg"
+)
+SPOTIFY_ALBUM_IMG_URL = os.getenv(
+    "SPOTIFY_ALBUM_IMG_URL", "https://files.catbox.moe/mn69cu.jpg"
+)
+SPOTIFY_PLAYLIST_IMG_URL = os.getenv(
+    "SPOTIFY_PLAYLIST_IMG_URL", "https://files.catbox.moe/mn69cu.jpg"
+)
+
 
 
 def time_to_seconds(time):

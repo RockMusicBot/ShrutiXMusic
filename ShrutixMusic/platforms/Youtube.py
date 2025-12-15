@@ -35,7 +35,7 @@ SHRUTI_API_URL: Optional[str] = None
 # 2. Inflex API (Primary 2)
 INFLEX_API_URL = "https://teaminflex.xyz"
 # !!! REPLACE THIS WITH YOUR ACTUAL INFLEX API KEY !!!
-INFLEX_API_KEY = "INFLEX66417728D" 
+INFLEX_API_KEY = "INFLEX66" 
 
 # 3. xBit Music API (New Primary 3)
 YTPROXY_URL = "https://tgapi.xbitcode.com" ## xBit Music Endpoint

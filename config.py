@@ -25,6 +25,8 @@ LOGGER_ID = int(getenv("LOGGER_ID"))
 OWNER_ID = int(getenv("OWNER_ID", 8450725193))
 
 #Api System 
+YTPROXY_URL = getenv("YTPROXY_URL", 'https://tgapi.xbitcode.com') ## xBit Music Endpoint.
+YT_API_KEY = getenv("YT_API_KEY" , None ) ## Your API key like: xbit_10000000xx0233 Get from  https://t.me/tgmusic_apibot
 
 ## Fill these variables if you're deploying on heroku.
 # Your heroku app name

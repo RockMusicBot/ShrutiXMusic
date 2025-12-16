@@ -52,16 +52,6 @@
         "value": "",
         "required": false
       },
-        "YTPROXY_URL": {
-        "description": "YT Proxy Server Endpoint",
-        "value": "https://tgapi.xbitcode.com",
-        "required": false
-      },
-        "YT_API_KEY": {
-        "description": "xbit_vXeUavHk2nhb12AGpMwKhbrEHoaMrJam",
-        "value": "",
-        "required": false
-      },
       "LOGGER_ID": {
         "description": "Your Log Group ID, add your bot and promote as an admin with full rights!. Channel ki id mat daal dena bsdk.",
         "value": "",
@@ -80,4 +70,5 @@
           }
       ],
       "stack": "container"
-  }
+}
+

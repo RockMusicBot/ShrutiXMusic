@@ -12,7 +12,7 @@ from pyrogram.enums import MessageEntityType
 from pyrogram.types import Message
 from py_yt import VideosSearch
 # NOTE: Ensure this external utility is available in your project structure
-from ShrutixMusic.utils.formatters import time_to_seconds 
+from ShrutiMusic.utils.formatters import time_to_seconds 
 
 # ---------------------------------------------------------------------------------
 #                            UTILITY & CONFIGURATION
@@ -144,20 +144,32 @@ async def shruti_api_download(video_id: str, is_video: bool) -> Optional[str]:
                 if response.status != 200: 
                     logger.error(f"{log_prefix} [Shruti] Token fetch failed with status {response.status}")
                     return None
+                
                 data = await response.json()
+                
+                # *** FIX 1: Ensure we check status and extract token correctly (Addresses your log error) ***
+                if data.get("status") != "success":
+                    # If status is not 'success', it's an API error message
+                    logger.error(f"{log_prefix} [Shruti] API reported error: {data.get('message', 'Unknown API Error')}")
+                    return None
+                    
                 download_token = data.get("download_token")
                 if not download_token: 
                     logger.error(f"{log_prefix} [Shruti] Missing download token.")
                     return None
                 
+                logger.info(f"{log_prefix} [Shruti] Token received. Starting stream.")
+                
             # 2. Stream the file
             stream_url = f"{SHRUTI_API_URL}/stream/{video_id}?type={file_type}"
             async with session.get(
-                stream_url, headers={"X-Download-Token": download_token},
+                stream_url, 
+                # Use the token in the specified header
+                headers={"X-Download-Token": download_token}, 
                 timeout=aiohttp.ClientTimeout(total=600 if is_video else 300)
             ) as file_response:
                 if file_response.status != 200: 
-                    logger.error(f"{log_prefix} [Shruti] Stream failed with status {file_response.status}")
+                    logger.error(f"{log_prefix} [Shruti] Stream failed with status {file_response.status} or invalid token.")
                     return None
                     
                 with open(file_path, "wb") as f:
@@ -169,7 +181,7 @@ async def shruti_api_download(video_id: str, is_video: bool) -> Optional[str]:
                     return file_path
                 else:
                     logger.error(f"{log_prefix} [Shruti] Downloaded file is empty.")
-                    os.remove(file_path)
+                    if os.path.exists(file_path): os.remove(file_path)
                     return None
                     
     except Exception as e:
@@ -199,7 +211,6 @@ async def xbit_api_download(video_id: str, is_video: bool) -> Optional[str]:
     try:
         async with aiohttp.ClientSession() as session:
             headers = {"x-api-key": YT_API_KEY}
-            endpoint = "video" if is_video else "audio"
             
             # 1. Get info/download link
             async with session.get(f"{YTPROXY_URL}/info/{video_id}", headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
@@ -213,9 +224,12 @@ async def xbit_api_download(video_id: str, is_video: bool) -> Optional[str]:
                     logger.error(f"{log_prefix} [xBit] API error: {data.get('message', 'Unknown error')}")
                     return None
                 
-                download_url = data.get(f"{endpoint}_url") 
+                # *** FIX 2: Ensure correct key is extracted from the response ***
+                key = "video_url" if is_video else "audio_url"
+                download_url = data.get(key)
+                
                 if not download_url:
-                    logger.error(f"{log_prefix} [xBit] Missing download URL in response.")
+                    logger.error(f"{log_prefix} [xBit] Missing download URL ({key}) in response.")
                     return None
             
             # 2. Stream the file
@@ -233,7 +247,7 @@ async def xbit_api_download(video_id: str, is_video: bool) -> Optional[str]:
                     return file_path
                 else:
                     logger.error(f"{log_prefix} [xBit] Downloaded file is empty.")
-                    os.remove(file_path)
+                    if os.path.exists(file_path): os.remove(file_path)
                     return None
 
     except Exception as e:
@@ -255,7 +269,8 @@ async def quickearn_api_download(video_id: str, is_video: bool) -> Optional[str]
     endpoint = "video" if is_video else "song"
     url_to_poll = f"{THEQUICKEARN_API_URL}/{endpoint}/{video_id}?api={THEQUICKEARN_API_KEY}"
     
-    temp_file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}_quickearn.tmp")
+    # Using the final file path for cleanup check, assuming we know the ID
+    file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.{'mp4' if is_video else 'mp3'}") 
 
     try:
         async with aiohttp.ClientSession() as session:
@@ -265,7 +280,7 @@ async def quickearn_api_download(video_id: str, is_video: bool) -> Optional[str]
                     async with session.get(url_to_poll, timeout=aiohttp.ClientTimeout(total=15)) as response:
                         if response.status != 200: raise Exception(f"API request failed with status code {response.status}")
                     
-                        data = await response.json(content_type=None) # Handle non-json responses
+                        data = await response.json(content_type=None) 
                         status = data.get("status", "").lower()
 
                         if status == "done":
@@ -281,7 +296,7 @@ async def quickearn_api_download(video_id: str, is_video: bool) -> Optional[str]
                             raise Exception(f"API error: {error_msg}")
                 except Exception as e:
                     logger.error(f"{log_prefix} [QuickEarn] Polling attempt {attempt+1} failed: {e}")
-                    if attempt == 2: return None # Fail after 3rd attempt
+                    if attempt == 2: return None 
             else:
                 return None
         
@@ -301,12 +316,12 @@ async def quickearn_api_download(video_id: str, is_video: bool) -> Optional[str]
                 return file_path
             else:
                 logger.error(f"{log_prefix} [QuickEarn] Downloaded file is empty.")
-                os.remove(file_path)
+                if os.path.exists(file_path): os.remove(file_path)
                 return None
                 
     except Exception as e:
         logger.error(f"{log_prefix} [QuickEarn] Overall Exception for ID: {video_id} - {e}")
-        if os.path.exists(temp_file_path): os.remove(temp_file_path)
+        if os.path.exists(file_path): os.remove(file_path)
         return None
 
 
@@ -316,6 +331,14 @@ def yt_dlp_sync_download(link: str, is_video: bool) -> Optional[str]:
     
     log_prefix = "🎥" if is_video else "🎵"
     cookie_file = cookie_txt_file()
+    
+    # Clean up any potential failed files before starting
+    video_id = link.split('v=')[-1].split('&')[0] if 'v=' in link else link
+    if video_id:
+        for ext in ["mp3", "m4a", "webm", "mp4"]:
+            temp_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.{ext}")
+            if os.path.exists(temp_path):
+                 os.remove(temp_path)
         
     try:
         ydl_optssx = {
@@ -331,29 +354,36 @@ def yt_dlp_sync_download(link: str, is_video: bool) -> Optional[str]:
             # High quality video up to 720p with best audio
             ydl_optssx["format"] = "(bestvideo[height<=?720][ext=mp4])+(bestaudio[ext=m4a])"
             ydl_optssx["merge_output_format"] = "mp4"
+            target_ext = "mp4"
         else:
             # Best audio quality, converted to mp3
             ydl_optssx["format"] = "bestaudio/best"
             ydl_optssx["postprocessors"] = [
                 {"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}
             ]
+            target_ext = "mp3"
         
         logger.info(f"{log_prefix} [YTDLP] Starting final failsafe download...")
         x = yt_dlp.YoutubeDL(ydl_optssx)
         info = x.extract_info(link, download=True)
         
         # Get the actual file path after download and processing
+        # This glob is the most reliable way to find the final file name
         downloaded_file = glob.glob(os.path.join(DOWNLOAD_DIR, f"{info['id']}.*"))
+        
         if downloaded_file:
              xyz = downloaded_file[0]
         else:
-             xyz = os.path.join(DOWNLOAD_DIR, f"{info['id']}.{info.get('ext', 'mp3')}")
+             # Fallback guess based on expected target extension
+             xyz = os.path.join(DOWNLOAD_DIR, f"{info['id']}.{target_ext}")
         
         if os.path.exists(xyz) and os.path.getsize(xyz) > 0:
-            logger.info(f"{log_prefix} [YTDLP] Download completed successfully.")
+            logger.info(f"{log_prefix} [YTDLP] Download completed successfully: {xyz}")
             return xyz
         else:
             logger.error(f"{log_prefix} [YTDLP] Downloaded file is empty or missing.")
+            # *** FIX 3: Ensure returning None if file is not found, which prevents FileNotFoundError upstream ***
+            if os.path.exists(xyz): os.remove(xyz)
             return None
             
     except Exception as e:
@@ -377,8 +407,13 @@ async def download_manager(link: str, is_video: bool) -> Tuple[Optional[str], bo
     Phase 1: Primary APIs (Shrutibots, xBit Music) in parallel.
     Phase 2: Fallback APIs (QuickEarn, YTDLP) in parallel.
     """
-    video_id = link.split('v=')[-1].split('&')[0] if 'v=' in link else link
-
+    # Use a robust way to get the video ID
+    match = re.search(r'(?:youtube\.com/watch\?v=|youtu\.be/|&v=)([^&]+)', link)
+    if match:
+        video_id = match.group(1)
+    else:
+        video_id = link
+    
     if not video_id or len(video_id) < 3:
         logger.error("[Manager] Invalid video ID.")
         return None, False
@@ -393,6 +428,7 @@ async def download_manager(link: str, is_video: bool) -> Tuple[Optional[str], bo
             
     # 2. Phase 1: Primary Parallel Stage (Shrutibots & xBit)
     logger.info(f"[Manager] Starting Phase 1 (Primary: Shruti, xBit) for {video_id}")
+    
     
     primary_tasks = [
         asyncio.create_task(shruti_api_download(video_id, is_video), name="P1_Shruti"),
@@ -462,6 +498,7 @@ async def download_manager(link: str, is_video: bool) -> Tuple[Optional[str], bo
 
     # 4. Final Failsafe Log (All attempts exhausted)
     logger.error(f"[Manager] All download attempts failed for {video_id}")
+    # *** FIX 4: Explicitly return None, False when all attempts fail. ***
     return None, False
 
 # ---------------------------------------------------------------------------------
@@ -469,6 +506,9 @@ async def download_manager(link: str, is_video: bool) -> Tuple[Optional[str], bo
 # ---------------------------------------------------------------------------------
 
 class YouTubeAPI:
+    # ... (Most methods remain unchanged, rely on download_manager) ...
+    # Placeholder for the unchanged class structure for completeness
+    
     def __init__(self):
         self.base = "https://www.youtube.com/watch?v="
         self.regex = r"(?:youtube\.com|youtu\.be)"
@@ -658,3 +698,4 @@ class YouTubeAPI:
         
         # The download_manager handles all prioritized logic
         return await download_manager(link, is_video=is_video)
+        

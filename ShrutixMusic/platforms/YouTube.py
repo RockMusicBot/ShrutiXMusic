@@ -15,7 +15,7 @@ FALLBACK_API_URL = "https://shrutibots.site"
 
 async def load_api_urls():
     global API_URLS
-    logger = LOGGER("ShrutiMusic.platforms.Youtube.py")
+    logger = LOGGER("ShrutixMusic.platforms.Youtube.py")
     
     loaded_urls = []
     

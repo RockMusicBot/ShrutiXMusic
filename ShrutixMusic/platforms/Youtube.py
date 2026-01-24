@@ -35,7 +35,7 @@ SHRUTI_API_URL: Optional[str] = None
 # 2. Inflex API (Primary 2)
 INFLEX_API_URL = "https://teaminflex.xyz"
 # !!! REPLACE THIS WITH YOUR ACTUAL INFLEX API KEY !!!
-INFLEX_API_KEY = "INFLEX61942628D" 
+INFLEX_API_KEY = "INFLEX64438028D" 
 
 # 3. xBit Music API (New Primary 3)
 YTPROXY_URL = "https://tgapi.xbitcode.com" ## xBit Music Endpoint
@@ -47,7 +47,7 @@ THEQUICKEARN_API_KEY = "30DxNexGenBots62dba1"
 
 # 5. Fallen API (Fallback 2)
 FALLEN_API_URL = "https://tgmusic.fallenapi.fun"
-FALLEN_API_KEY = "1627ff_iQZYYZxE5tpMrXDMAT9JfikIzWxLS7dq"
+FALLEN_API_KEY = "3b8bd8_XSx6ZLvxdiSIUGDrI7_lvB1kS6LMisF2"
 
 
 # --- API URL Initialization (Shrutibots) ---

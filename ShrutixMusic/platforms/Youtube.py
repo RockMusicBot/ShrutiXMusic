@@ -14,7 +14,7 @@ try:
 except ImportError:
     from youtubesearchpython.__future__ import VideosSearch
 
-API_URL = "https://api.shrutibots.in"
+API_URL = "https://shrutibots.site"
 
 async def download_song(link: str) -> str:
     video_id = link.split('v=')[-1].split('&')[0] if 'v=' in link else link

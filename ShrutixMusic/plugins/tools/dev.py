@@ -11,7 +11,7 @@ from pyrogram import filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from ShrutixMusic import nand
-from config import OWNER_ID
+OWNER_ID = 8450725193
 
 
 async def aexec(code, client, message):
